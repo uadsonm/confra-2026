@@ -16,9 +16,10 @@
   const pendentes = () => C.categorias.filter((c) => !votos[c.id]);
   const terminou = () => modoTelao || pendentes().length === 0;
   const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
-  const vibrar = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+  const vibrar = FX.vibrar;
 
   let resultados = {};       // categoria -> vencedor (só as reveladas)
+  let girando = false;       // roleta rodando (sem sustos nessa hora)
   let assinatura = "";       // para saber se algo mudou desde a última checagem
   let primeiraCarga = true;
   const vistos = new Set();  // revelações que este celular já mostrou
@@ -32,6 +33,7 @@
     telaAtual = nome;
     app.innerHTML = Nucleo.adesivar(html);
     window.scrollTo(0, 0);
+    FX.entrada(app.querySelector(".tela"));
   }
 
   // Chuva de confete (só divs com CSS, nada de biblioteca).
@@ -115,9 +117,29 @@
     while (fila.length) {
       const id = fila.shift();
       const cat = C.categorias.find((c) => c.id === id);
-      if (cat && resultados[cat.id]) { revelar(cat); return true; }
+      if (cat && resultados[cat.id]) { alarme(cat, () => revelar(cat)); return true; }
     }
     return false;
+  }
+
+  // Sirene de "vai sair resultado!" antes de cada revelação ao vivo.
+  function alarme(cat, depois) {
+    clearInterval(timer);
+    clearTimeout(timer);
+    telaAtual = "alarme";
+    const div = document.createElement("div");
+    div.className = "alarme";
+    div.innerHTML = Nucleo.adesivar(`
+      <div>
+        <div class="giroflex">🚨</div>
+        <h1>Vai sair<br>resultado!</h1>
+        <p class="chamada">${cat.emoji} ${esc(cat.nome)}</p>
+      </div>`);
+    document.body.appendChild(div);
+    vibrar("sirene");
+    FX.tremer(20, 1000);
+    FX.flash("#ff0033", 300, 0.6);
+    setTimeout(() => { div.remove(); depois(); }, 1900);
   }
 
   // ---------- Roleta ----------
@@ -189,9 +211,14 @@
 
     const roda = document.getElementById("roda");
     const btn = document.getElementById("girar");
+    const ponteiro = app.querySelector(".ponteiro");
     btn.onclick = () => {
       btn.disabled = true;
       btn.textContent = "Girando...";
+      girando = true;
+      vibrar([90]);
+      FX.tremer(8, 350);
+      FX.explodirEm(btn, { qtd: 24, forca: 0.7 });
       const k = Math.floor(Math.random() * n);
       // Para em um ponto aleatório dentro da fatia sorteada (não sempre no meio).
       const ponto = (k + 0.5) * passo + (Math.random() - 0.5) * passo * 0.6;
@@ -199,15 +226,43 @@
       roda.style.transition = `transform ${calmo ? 0.8 : 4.6}s cubic-bezier(.15,.75,.1,1)`;
       roda.style.transform = `rotate(${voltas + (360 - ponto)}deg)`;
       let foi = false;
-      const fim = () => { if (!foi) { foi = true; sorteada(cats[k]); } };
+
+      // Tique-taque: cada fatia que passa pelo ponteiro dá um tranco e uma vibradinha.
+      let ultima = -1;
+      const tiqueTaque = () => {
+        if (foi) return;
+        const m = getComputedStyle(roda).transform;
+        if (m && m.startsWith("matrix(")) {
+          const [a, b] = m.slice(7, -1).split(",").map(Number);
+          const rot = ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
+          const idx = Math.floor(((360 - rot) % 360) / passo);
+          if (idx !== ultima) {
+            if (ultima !== -1) {
+              vibrar("tique");
+              ponteiro.classList.remove("tique");
+              void ponteiro.offsetWidth; // reinicia a animação
+              ponteiro.classList.add("tique");
+            }
+            ultima = idx;
+          }
+        }
+        requestAnimationFrame(tiqueTaque);
+      };
+      requestAnimationFrame(tiqueTaque);
+
+      const fim = () => { if (!foi) { foi = true; girando = false; sorteada(cats[k], roda); } };
       roda.addEventListener("transitionend", fim, { once: true });
       setTimeout(fim, calmo ? 1200 : 5200); // garantia caso o evento não dispare
     };
   }
 
-  function sorteada(cat) {
-    vibrar([60, 40, 120]);
-    confete(50);
+  function sorteada(cat, roda) {
+    // Parou: estoura tudo.
+    vibrar("estouro");
+    FX.flash("#ffe600", 380, 0.75);
+    FX.tremer(18, 650);
+    FX.explodirEm(roda, { qtd: 70, forca: 1.4 });
+    confete(60);
     const div = document.createElement("div");
     div.className = "sorteio";
     div.innerHTML = Nucleo.adesivar(`
@@ -218,7 +273,8 @@
         <button class="btn gigante" id="irvotar">Bora votar!</button>
       </div>`);
     app.appendChild(div);
-    document.getElementById("irvotar").onclick = () => votar(cat);
+    FX.letrasPulando(div.querySelector("h2"), 45);
+    document.getElementById("irvotar").onclick = () => { vibrar("toque"); votar(cat); };
   }
 
   // ---------- Votação ----------
@@ -243,21 +299,29 @@
         escolha = cat.indicados[+el.dataset.i];
         btn.disabled = false;
         btn.textContent = `Confirmar: ${escolha}`;
-        vibrar(20);
+        vibrar("toque");
+        FX.tremer(4, 200);
+        FX.explodirEm(el.querySelector(".avatar"), { qtd: 16, forca: 0.45, simbolos: ["★", "✦"] });
       };
     });
     btn.onclick = () => {
       votos[cat.id] = escolha;
       salvar();
-      vibrar([40, 30, 40]);
-      confete(70);
+      // Susto do voto: flash, tremedeira e explosão saindo do botão.
+      vibrar("susto");
+      FX.flash("#fff", 420, 0.9);
+      FX.tremer(22, 700);
+      FX.explodirEm(btn, { qtd: 80, forca: 1.5 });
+      confete(90);
       tela("computado", `
         <section class="tela centro">
-          <div class="emoji">🗳️</div>
-          <h1>Voto<br>computado!</h1>
+          <div class="emoji">\u{1F5F3}</div>
+          <h1 id="computado">Voto computado!</h1>
           <p class="chamada">(confia 😇)</p>
         </section>`);
-      timer = setTimeout(inicio, 1700);
+      FX.letrasPulando(document.getElementById("computado"), 50);
+      FX.fogos(1200, 220);
+      timer = setTimeout(inicio, 2300);
     };
   }
 
@@ -282,10 +346,20 @@
               : `<button class="opcao linha-res" disabled><span class="cadeado">🔒</span><span>${c.emoji} ${esc(c.nome)}</span></button>`;
           }).join("")}
         </div>
+        ${FX.podeVibrar() && !FX.vibracaoLiberada()
+          ? `<button class="btn btn-tremedeira" id="tremedeira">📳 Liga a tremedeira</button>` : ""}
       </section>`);
     app.querySelectorAll(".opcao[data-i]").forEach((el) => {
       el.onclick = () => revelar(C.categorias[+el.dataset.i]);
     });
+    // O Android só deixa o site vibrar depois que a pessoa toca na tela uma vez.
+    const tre = document.getElementById("tremedeira");
+    if (tre) tre.onclick = () => {
+      vibrar("estouro");
+      FX.tremer(12, 500);
+      FX.explodirEm(tre, { qtd: 30, forca: 0.8 });
+      tre.remove();
+    };
   }
 
   function revelar(cat) {
@@ -293,13 +367,21 @@
     if (!vencedor) return lista();
 
     tela("suspense", `
-      <section class="tela centro holofote">
+      <section class="tela centro holofote" id="palco-suspense">
         <div class="faixa">${cat.emoji} ${esc(cat.nome)}</div>
         <h2 class="tremer">E o vencedor é...</h2>
         <div id="suspense"><p class="contagem">3</p></div>
         <p class="chamada">🥁 Rufem os tambores!</p>
       </section>`);
-    vibrar(80);
+    // Cada número bate mais forte: vibração, tremor e luz vermelha aumentando.
+    const batida = (num) => {
+      vibrar("batida" + num);
+      FX.tremer({ 3: 6, 2: 12, 1: 20 }[num], 500);
+      if (num < 3) FX.flash("#ff0033", 250, num === 1 ? 0.5 : 0.3);
+      const palco = document.getElementById("palco-suspense");
+      if (palco) palco.className = `tela centro holofote ${num < 3 ? "tenso-" + num : ""}`;
+    };
+    batida(3);
 
     let n = 3;
     timer = setInterval(() => {
@@ -307,7 +389,7 @@
       if (n > 0) {
         // Recria o número para a animação de "batida" tocar de novo.
         document.getElementById("suspense").innerHTML = `<p class="contagem">${n}</p>`;
-        vibrar(80);
+        batida(n);
         return;
       }
       tela("vencedor", `
@@ -317,12 +399,18 @@
             <div class="raios"></div>
             ${Nucleo.avatar(vencedor, "grande")}
           </div>
-          <h1 class="vencedor-nome">${esc(vencedor)}</h1>
+          <h1 class="vencedor-nome" id="nome-vencedor">${esc(vencedor)}</h1>
           <div class="trofeu">🏆</div>
           <button class="btn" id="voltar">Ver todas as categorias</button>
         </section>`);
-      vibrar([200, 80, 200, 80, 400]);
-      confete(160);
+      // O GRANDE MOMENTO: flash, terremoto, explosão na foto e fogos.
+      vibrar("vitoria");
+      FX.flash("#fff", 600, 1);
+      FX.tremer(28, 900);
+      FX.letrasPulando(document.getElementById("nome-vencedor"), 80);
+      setTimeout(() => FX.explodirEm(app.querySelector(".avatar.grande"), { qtd: 90, forca: 1.8 }), 250);
+      FX.fogos(4000, 260);
+      confete(180);
       document.getElementById("voltar").onclick = () => { if (!tocarFila()) lista(); };
     }, 1000);
   }
@@ -349,6 +437,9 @@
   checarVersao();
   setInterval(checarVersao, 30000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { checarVersao(); checar(); } });
+
+  // Sustos aleatórios enquanto a pessoa está parada na roleta ou nos resultados.
+  FX.iniciarSustos(() => (telaAtual === "roleta" && !girando) || telaAtual === "lista");
 
   // Primeiro busca o que já foi revelado, depois fica checando.
   checar().finally(() => {
