@@ -155,6 +155,7 @@
   }
 
   function roleta() {
+    girando = false;
     const cats = pendentes();
     const n = cats.length;
     const passo = 360 / n;
@@ -212,6 +213,39 @@
     const roda = document.getElementById("roda");
     const btn = document.getElementById("girar");
     const ponteiro = app.querySelector(".ponteiro");
+
+    // Só sobrou uma categoria: nada de girar, a roda explode sozinha e já vai pro voto.
+    if (n === 1) {
+      btn.disabled = true;
+      btn.textContent = "Última categoria! 💥";
+      girando = true;
+      const caixa = app.querySelector(".roda-box");
+      timer = setTimeout(() => {
+        vibrar("estouro");
+        FX.tremer(10, 500);
+        caixa.animate(
+          [{ transform: "scale(1)" }, { transform: "scale(1.08) rotate(-6deg)" }, { transform: "scale(.95) rotate(6deg)" }, { transform: "scale(1.12)" }],
+          { duration: 600, easing: "ease-in-out" }
+        );
+        timer = setTimeout(() => {
+          // BUM!
+          vibrar("susto");
+          FX.flash("#fff", 500, 1);
+          FX.tremer(26, 800);
+          FX.explodirEm(caixa, { qtd: 100, forca: 1.9 });
+          setTimeout(() => FX.explodirEm(caixa, { qtd: 50, forca: 1.2, simbolos: ["✦", "★"] }), 180);
+          confete(120);
+          caixa.animate(
+            [{ transform: "scale(1.12)", opacity: 1, filter: "brightness(1)" },
+             { transform: "scale(1.6) rotate(25deg)", opacity: 0, filter: "brightness(3)" }],
+            { duration: 350, easing: "ease-out", fill: "forwards" }
+          );
+          timer = setTimeout(() => { girando = false; votar(cats[0]); }, 1100);
+        }, 600);
+      }, 1100);
+      return;
+    }
+
     btn.onclick = () => {
       btn.disabled = true;
       btn.textContent = "Girando...";
