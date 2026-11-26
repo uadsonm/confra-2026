@@ -190,7 +190,7 @@
     "Quem quer dinheiro?! 💸"
   ];
   let proximoSusto = 0;
-  const agendar = () => { proximoSusto = Date.now() + rand(25000, 60000); };
+  const agendar = () => { proximoSusto = Date.now() + rand(8000, 20000); }; // a cada 8 a 20 s
   function iniciarSustos(podeAgora) {
     agendar();
     setInterval(() => {
