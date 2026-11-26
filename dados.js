@@ -6,8 +6,8 @@ window.CONFRA = {
   // Supabase > Project Settings > API: "Project URL" e a chave "anon"/"publishable".
   // Essa chave é pública por natureza, pode ficar aqui. Vazio = modo de teste local.
   supabase: {
-    url: "",
-    chave: ""
+    url: "https://pmuazzlldkrrhkiwcydg.supabase.co",
+    chave: "sb_publishable_BhDR24TOfrpkjJvqWKldJA_iCNvuXUs"
   },
 
   // Cada nome precisa ser IGUAL ao nome do arquivo em avatar/ (sem o .jpeg).
