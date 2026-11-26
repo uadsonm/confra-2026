@@ -50,7 +50,7 @@
     el.className = "fx-flash";
     el.style.background = cor;
     document.body.appendChild(el);
-    el.animate([{ opacity: opacidade }, { opacity: 0 }], { duration: ms, easing: "ease-out" }).onfinish = () => el.remove();
+    el.animate([{ opacity: opacidade }, { opacity: 0 }], { duration: ms, easing: "ease-out", fill: "forwards" }).onfinish = () => el.remove();
   }
 
   // ---------- Explosão ----------
@@ -68,8 +68,9 @@
     camada.appendChild(onda);
     onda.animate(
       [{ transform: "translate(-50%,-50%) scale(.1)", opacity: 1 }, { transform: `translate(-50%,-50%) scale(${6 * forca})`, opacity: 0 }],
-      { duration: 650, easing: "cubic-bezier(.1,.8,.3,1)" }
-    );
+      // fill "forwards" + remover ao terminar: sem isso o anel voltava a aparecer parado.
+      { duration: 650, easing: "cubic-bezier(.1,.8,.3,1)", fill: "forwards" }
+    ).onfinish = () => onda.remove();
 
     const n = calmo ? Math.min(qtd, 12) : qtd;
     for (let i = 0; i < n; i++) {
@@ -91,8 +92,8 @@
           { transform: `translate(calc(-50% + ${dx * 0.8}px), calc(-50% + ${dy * 0.8}px)) scale(1.2) rotate(${rand(-200, 200)}deg)`, opacity: 1, offset: 0.55 },
           { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy + rand(80, 220)}px)) scale(.5) rotate(${rand(-400, 400)}deg)`, opacity: 0 }
         ],
-        { duration: rand(800, 1400), easing: "cubic-bezier(.15,.75,.35,1)" }
-      );
+        { duration: rand(800, 1400), easing: "cubic-bezier(.15,.75,.35,1)", fill: "forwards" }
+      ).onfinish = () => p.remove();
     }
     setTimeout(() => camada.remove(), 1600);
   }
@@ -171,7 +172,7 @@
         { transform: "translate(-50%, 0) rotate(-2deg)", opacity: 1, offset: 0.85 },
         { transform: "translate(-50%, -140%) rotate(4deg)", opacity: 0 }
       ],
-      { duration: ms, easing: "ease-in-out" }
+      { duration: ms, easing: "ease-in-out", fill: "forwards" }
     ).onfinish = () => el.remove();
   }
 
