@@ -3,3 +3,6 @@ supabase.sql
 
 # Configuração local do Claude (servidor de teste).
 .claude/
+
+# Fotos originais em alta resolução (o site usa as comprimidas em avatar/).
+avatar-original/
