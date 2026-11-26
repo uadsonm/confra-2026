@@ -488,24 +488,8 @@
   // O GitHub Pages deixa o celular guardar a página por 10 min. Para ninguém ficar
   // preso numa versão velha, o site confere o versao.txt (sem cache) e, se mudou,
   // recarrega num endereço novo (que nenhum cache tem).
-  const VERSAO = ((document.currentScript && document.currentScript.src) || "").match(/[?&]v=(\d+)/)?.[1];
-  async function checarVersao() {
-    if (!VERSAO) return;
-    try {
-      const r = await fetch("versao.txt?t=" + Date.now(), { cache: "no-store" });
-      const nova = (await r.text()).trim();
-      if (!/^\d+$/.test(nova) || nova === VERSAO) return;
-      if (sessionStorage.getItem("confra-atualizou") === nova) return; // evita loop
-      sessionStorage.setItem("confra-atualizou", nova);
-      const p = new URLSearchParams(location.search);
-      p.delete("reset");
-      p.set("v", nova);
-      location.replace(location.pathname + "?" + p.toString() + location.hash);
-    } catch (e) { /* sem internet: tenta de novo depois */ }
-  }
-  checarVersao();
-  setInterval(checarVersao, 30000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) { checarVersao(); checar(); } });
+  Nucleo.autoAtualizar();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checar(); });
 
   // Sustos aleatórios enquanto a pessoa está parada na roleta ou nos resultados.
   FX.iniciarSustos(() => (telaAtual === "roleta" && !girando) || telaAtual === "lista");

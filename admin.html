@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer">
   <title>Admin</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@500;700;900&display=swap">
-  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="stylesheet" href="style.css?v=13">
   <style>
     .card { background: #1c1c1c; border: 2px solid #333; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
     .card.rev { border-color: #2ecc71; }
@@ -31,13 +31,25 @@
     .voto-linha.top .barra i { background: var(--rosa); }
     .voto-linha .tag { font-size: .7rem; font-weight: 900; color: var(--amarelo); margin-left: 4px; }
     .btn-aceitar { background: #2ecc71 !important; color: var(--tinta) !important; }
-    .contador { text-align: center; font-weight: 900; }
+    .contador { text-align: center; font-weight: 900; font-size: 1.1rem; }
+    .contador b { font-family: var(--titulo); font-weight: 400; color: var(--amarelo); font-size: 1.3rem; }
+    .ao-vivo.caiu { background: #555; }
+    .ao-vivo.caiu::before { animation: none; }
+    /* Voto novo: a linha pisca e aparece um "+1". */
+    .voto-linha.subiu { animation: subiu 1.4s ease-out; border-radius: 6px; }
+    @keyframes subiu { 0%, 30% { background: rgba(255, 230, 0, .35); } 100% { background: transparent; } }
+    .voto-linha .mais {
+      display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 99px;
+      background: var(--rosa); color: #fff; font-size: .72rem; font-weight: 900;
+      animation: mais 1.6s ease-out forwards;
+    }
+    @keyframes mais { 0% { transform: scale(.3); opacity: 0; } 15% { transform: scale(1.3); opacity: 1; } 75% { transform: none; opacity: 1; } 100% { opacity: 0; } }
   </style>
 </head>
 <body>
   <main id="app" class="tela"></main>
-  <script src="dados.js?v=12"></script>
-  <script src="nucleo.js?v=12"></script>
+  <script src="dados.js?v=13"></script>
+  <script src="nucleo.js?v=13"></script>
   <script>
     const C = window.CONFRA;
     const app = document.getElementById("app");
@@ -79,7 +91,7 @@
         render();
         atualizarApuracao();
         clearInterval(timerApuracao);
-        timerApuracao = setInterval(atualizarApuracao, 5000);
+        timerApuracao = setInterval(atualizarApuracao, 2000);
       } catch (e) {
         sessionStorage.removeItem("confra-senha");
         if (!senha) return telaSenha("");
@@ -89,22 +101,43 @@
       }
     }
 
-    // ---------- Apuração real (atualiza sozinha a cada 5 s) ----------
+    // ---------- Apuração real, ao vivo (a cada 2 s) ----------
+    let buscando = false;
+    let ultimaAtualizacao = 0;
+    const anterior = {};      // "categoria|nome" -> votos na última pintura (para o "+1")
+    const assinaturas = {};   // categoria -> dados da última pintura (só redesenha se mudou)
+    let primeiraPintura = true;
+
     async function atualizarApuracao() {
+      if (buscando) return;
+      buscando = true;
       try {
         const r = await Nucleo.adminVotos(senha);
         const porCat = {};
         (r.votos || []).forEach((v) => (porCat[v.categoria] = porCat[v.categoria] || []).push(v));
-        Object.values(porCat).forEach((l) => l.sort((a, b) => b.votos - a.votos));
+        Object.values(porCat).forEach((l) => l.sort((a, b) => b.votos - a.votos || a.escolhido.localeCompare(b.escolhido)));
         apuracao = { celulares: r.celulares || 0, porCat };
         erroApuracao = "";
+        ultimaAtualizacao = Date.now();
       } catch (e) {
         erroApuracao = /admin_votos|function|schema cache/i.test(e.message)
           ? "Falta rodar o supabase-v3-votos.sql no Supabase para ver os votos reais."
-          : "Não consegui carregar os votos: " + e.message;
+          : "";
+      } finally {
+        buscando = false;
       }
       pintarApuracao();
     }
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && timerApuracao) atualizarApuracao(); });
+
+    // Indicador "ao vivo" (fica vermelho se a conexão cair).
+    setInterval(() => {
+      const el = document.getElementById("aovivo");
+      if (!el || !ultimaAtualizacao) return;
+      const s = Math.round((Date.now() - ultimaAtualizacao) / 1000);
+      el.className = "ao-vivo" + (s > 8 ? " caiu" : "");
+      el.textContent = s > 8 ? `Sem conexão há ${s}s` : "Ao vivo";
+    }, 1000);
 
     // Mais votado de uma categoria (null se ninguém votou ou se deu empate no topo).
     function maisVotado(id) {
@@ -118,9 +151,14 @@
     function pintarApuracao() {
       const cont = document.getElementById("contador");
       if (cont) {
+        const antes = cont.dataset.n;
         cont.innerHTML = erroApuracao
           ? `<span class="erro">${esc(erroApuracao)}</span>`
-          : apuracao ? `📱 ${apuracao.celulares} ${apuracao.celulares === 1 ? "celular votou" : "celulares votaram"}` : "Carregando votos…";
+          : apuracao ? `📱 <b>${apuracao.celulares}</b> ${apuracao.celulares === 1 ? "celular votou" : "celulares votaram"}` : "Carregando votos…";
+        if (apuracao && antes !== undefined && antes !== String(apuracao.celulares)) {
+          cont.animate([{ transform: "scale(1.25)", color: "#ffe600" }, { transform: "none" }], { duration: 600, easing: "ease-out" });
+        }
+        if (apuracao) cont.dataset.n = apuracao.celulares;
       }
       C.categorias.forEach((c) => {
         const caixa = document.querySelector(`[data-apu="${c.id}"]`);
@@ -130,15 +168,31 @@
         const total = l.reduce((s, v) => s + v.votos, 0);
         const max = l.length ? l[0].votos : 1;
         const e = estado[c.id] || {};
-        caixa.innerHTML = !l.length
-          ? `<div class="vazio">Ninguém votou nesta categoria ainda.</div>`
-          : `<div class="vazio">${total} ${total === 1 ? "voto" : "votos"}</div>` + l.map((v, i) => `
-            <div class="voto-linha ${i === 0 ? "top" : ""}">
-              ${Nucleo.avatar(v.escolhido, "mini")}
-              <span>${esc(v.escolhido)}${v.escolhido === e.vencedor ? `<span class="tag">★ ESCOLHIDO</span>` : ""}</span>
-              <b>${v.votos}</b>
-              <div class="barra"><i style="width:${(v.votos / max) * 100}%"></i></div>
-            </div>`).join("");
+
+        // Só redesenha a categoria se algo mudou (assim nada pisca à toa).
+        const sig = JSON.stringify(l) + "|" + e.vencedor;
+        if (assinaturas[c.id] !== sig || !caixa.innerHTML) {
+          assinaturas[c.id] = sig;
+          const larguraAntes = {};
+          caixa.querySelectorAll(".voto-linha").forEach((el) => (larguraAntes[el.dataset.nome] = el.querySelector(".barra i").style.width));
+          caixa.innerHTML = !l.length
+            ? `<div class="vazio">Ninguém votou nesta categoria ainda.</div>`
+            : `<div class="vazio">${total} ${total === 1 ? "voto" : "votos"}</div>` + l.map((v, i) => {
+              const chave = c.id + "|" + v.escolhido;
+              const ganhou = primeiraPintura ? 0 : v.votos - (anterior[chave] || 0);
+              return `
+              <div class="voto-linha ${i === 0 ? "top" : ""} ${ganhou > 0 ? "subiu" : ""}" data-nome="${esc(v.escolhido)}">
+                ${Nucleo.avatar(v.escolhido, "mini")}
+                <span>${esc(v.escolhido)}${v.escolhido === e.vencedor ? `<span class="tag">★ ESCOLHIDO</span>` : ""}${ganhou > 0 ? `<span class="mais">+${ganhou}</span>` : ""}</span>
+                <b>${v.votos}</b>
+                <div class="barra"><i style="width:${larguraAntes[v.escolhido] || "0%"}" data-w="${(v.votos / max) * 100}%"></i></div>
+              </div>`;
+            }).join("");
+          // Barras crescem a partir de onde estavam.
+          void caixa.offsetWidth; // força o navegador a desenhar a largura antiga antes de animar
+          caixa.querySelectorAll(".barra i").forEach((b) => (b.style.width = b.dataset.w));
+          l.forEach((v) => (anterior[c.id + "|" + v.escolhido] = v.votos));
+        }
 
         if (btn) {
           const top = maisVotado(c.id);
@@ -150,12 +204,14 @@
           btn.dataset.nome = top.nome || "";
         }
       });
+      if (apuracao) primeiraPintura = false;
     }
 
     function render() {
       app.innerHTML = `
         <div class="status" id="status">${Nucleo.MOCK ? "⚠️ Modo de teste local (Supabase não configurado)" : "Conectado ✓"}</div>
         <h1>Admin</h1>
+        <span class="ao-vivo" id="aovivo">Ao vivo</span>
         <p class="contador" id="contador">Carregando votos…</p>
         <p class="miudo">Veja os votos reais de cada categoria. <b>Aceite o mais votado</b> ou escolha outra pessoa na lista. Ao tocar em <b>Revelar</b>, o resultado aparece na hora no celular de todo mundo.</p>
         ${C.categorias.map((c) => {
@@ -225,6 +281,9 @@
 
     // Colar o link com outra senha numa aba já aberta: recarrega com a nova.
     window.addEventListener("hashchange", () => location.reload());
+
+    // Recarrega sozinho quando sair versão nova (a senha fica guardada nesta aba).
+    Nucleo.autoAtualizar();
 
     senha ? carregar() : telaSenha();
   </script>
