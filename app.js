@@ -70,10 +70,13 @@
     }
 
     // O admin zerou a votação: apaga os votos deste celular e volta pra roleta.
+    // Votos sem rodada anotada (feitos antes desse recurso existir) contam como
+    // rodada antiga e também são apagados.
     if (rodada != null) {
-      const minha = Number(localStorage.getItem(KEY_RODADA));
+      const minha = Number(localStorage.getItem(KEY_RODADA)) || 0;
+      const temVotos = Object.keys(votos).length > 0;
       localStorage.setItem(KEY_RODADA, rodada);
-      if (minha && minha !== rodada) {
+      if (minha !== rodada && (minha || temVotos)) {
         Object.keys(votos).forEach((k) => delete votos[k]);
         salvar();
         vistos.clear();
