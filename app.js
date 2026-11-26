@@ -3,6 +3,7 @@
   const params = new URLSearchParams(location.search);
   const app = document.getElementById("app");
   const KEY = "confra-votos";
+  const KEY_RODADA = "confra-rodada";
   const INTERVALO = 4000; // de quanto em quanto tempo checa se algo foi revelado
   const CORES = ["#ff2e93", "#ffe600", "#00d4ff", "#7cff4f", "#ff8a00"];
   const calmo = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -29,7 +30,7 @@
     clearInterval(timer);
     clearTimeout(timer);
     telaAtual = nome;
-    app.innerHTML = html;
+    app.innerHTML = Nucleo.adesivar(html);
     window.scrollTo(0, 0);
   }
 
@@ -60,12 +61,30 @@
 
   // ---------- Resultados ao vivo ----------
   async function checar() {
-    let dados;
+    let dados, rodada;
     try {
-      dados = await Nucleo.revelados();
+      [dados, rodada] = await Promise.all([Nucleo.revelados(), Nucleo.rodada()]);
     } catch (e) {
       console.warn("sem conexão com o banco", e);
       return;
+    }
+
+    // O admin zerou a votação: apaga os votos deste celular e volta pra roleta.
+    if (rodada != null) {
+      const minha = Number(localStorage.getItem(KEY_RODADA));
+      localStorage.setItem(KEY_RODADA, rodada);
+      if (minha && minha !== rodada) {
+        Object.keys(votos).forEach((k) => delete votos[k]);
+        salvar();
+        vistos.clear();
+        fila.length = 0;
+        resultados = {};
+        assinatura = "";
+        primeiraCarga = false;
+        document.querySelectorAll(".sorteio").forEach((el) => el.remove());
+        inicio();
+        return;
+      }
     }
     dados.sort((a, b) => new Date(a.revelado_em) - new Date(b.revelado_em));
     resultados = Object.fromEntries(dados.map((r) => [r.categoria, r.vencedor]));
@@ -126,9 +145,19 @@
       const forma = n === 1
         ? `<circle class="unica" r="${R}" fill="${cor}"/>`
         : `<path d="${fatia(i * passo, (i + 1) * passo, R)}" fill="${cor}"/>`;
-      return forma + `<text class="fatia-emoji" x="${x.toFixed(2)}" y="${y.toFixed(2)}" ` +
-        `font-size="${n > 7 ? 20 : n > 4 ? 26 : 32}" transform="rotate(${meio} ${x.toFixed(2)} ${y.toFixed(2)})">${c.emoji}</text>`;
+      // Emoji como imagem (estilo adesivo), girado para "apontar" para fora da roda.
+      const t = n > 7 ? 24 : n > 4 ? 30 : 38;
+      return forma + `<image href="${Nucleo.emojiUrl(c.emoji)}" x="${(x - t / 2).toFixed(2)}" y="${(y - t / 2).toFixed(2)}" ` +
+        `width="${t}" height="${t}" filter="url(#adesivo)" transform="rotate(${meio} ${x.toFixed(2)} ${y.toFixed(2)})"/>`;
     }).join("");
+    // Borda branca + sombra de adesivo para os emojis da roda.
+    const filtro = `<defs><filter id="adesivo" x="-30%" y="-30%" width="160%" height="160%">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="1.6" result="d"/>
+      <feFlood flood-color="#fff"/><feComposite in2="d" operator="in" result="borda"/>
+      <feOffset in="d" dx="1.2" dy="1.8" result="s"/>
+      <feFlood flood-color="#1a0540"/><feComposite in2="s" operator="in" result="sombra"/>
+      <feMerge><feMergeNode in="sombra"/><feMergeNode in="borda"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter></defs>`;
 
     const luzes = Array.from({ length: 24 }, (_, i) => {
       const [x, y] = polar(i * 15, 100);
@@ -136,7 +165,7 @@
     }).join("");
 
     tela("roleta", `
-      <section class="tela">
+      <section class="tela tela-roleta">
         <header class="letreiro">
           <small>🎤 A confra apresenta</small>
           <h1>${esc(C.titulo)}</h1>
@@ -146,7 +175,7 @@
           : `${feitas} de ${C.categorias.length} votadas · ${n === 1 ? "falta só uma!" : `faltam ${n}`}`}</p>
         <div class="roda-box">
           <div class="ponteiro"></div>
-          <svg class="roda" id="roda" viewBox="-104 -104 208 208" aria-hidden="true">${fatias}</svg>
+          <svg class="roda" id="roda" viewBox="-104 -104 208 208" aria-hidden="true">${filtro}${fatias}</svg>
           <svg class="roda-luzes" viewBox="-104 -104 208 208" aria-hidden="true">
             <circle class="aro" r="100"/>${luzes}
             <circle class="miolo" r="17"/><text class="miolo-txt">★</text>
@@ -178,13 +207,13 @@
     confete(50);
     const div = document.createElement("div");
     div.className = "sorteio";
-    div.innerHTML = `
+    div.innerHTML = Nucleo.adesivar(`
       <div class="sorteio-card">
         <span class="saiu">Saiu na roleta!</span>
         <div class="emoji">${cat.emoji}</div>
         <h2>${esc(cat.nome)}</h2>
         <button class="btn gigante" id="irvotar">Bora votar!</button>
-      </div>`;
+      </div>`);
     app.appendChild(div);
     document.getElementById("irvotar").onclick = () => votar(cat);
   }

@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer">
   <title>Admin</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@500;700;900&display=swap">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=6">
   <style>
     .card { background: #1c1c1c; border: 2px solid #333; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
     .card.rev { border-color: #2ecc71; }
@@ -17,12 +17,14 @@
     .card.rev .btn { background: #2a2a2a; color: inherit; }
     .status { position: sticky; top: 0; background: #111; padding: 8px 0; font-size: .9rem; text-align: center; z-index: 1; }
     .erro { color: #ff6b6b; }
+    .card.perigo { margin-top: 24px; border-color: #ff6b6b; }
+    .card.perigo .btn { background: #ff6b6b; color: #fff; }
   </style>
 </head>
 <body>
   <main id="app" class="tela"></main>
-  <script src="dados.js?v=3"></script>
-  <script src="nucleo.js?v=3"></script>
+  <script src="dados.js?v=6"></script>
+  <script src="nucleo.js?v=6"></script>
   <script>
     const C = window.CONFRA;
     const app = document.getElementById("app");
@@ -83,9 +85,29 @@
             </select>
             <button class="btn">${e.revelado ? "Esconder de novo" : "🎉 Revelar"}</button>
           </div>`;
-        }).join("")}`;
+        }).join("")}
+        <div class="card perigo">
+          <h3>🔄 Zerar votação</h3>
+          <p class="miudo">Apaga os votos de todos os celulares, esconde o que já foi revelado e manda todo mundo de volta para a roleta (em até ~4 s). Os vencedores escolhidos acima continuam salvos.</p>
+          <button class="btn" id="zerar">Zerar e voltar todo mundo pra roleta</button>
+        </div>`;
 
-      app.querySelectorAll(".card").forEach((card) => {
+      document.getElementById("zerar").onclick = async () => {
+        if (!confirm("Zerar a votação? Todo mundo volta para a roleta e precisa votar de novo.")) return;
+        status("Zerando…");
+        try {
+          await Nucleo.adminResetar(senha);
+          Object.values(estado).forEach((e) => { e.revelado = false; });
+          render();
+          status("Votação zerada! Todo mundo volta pra roleta 🔄");
+        } catch (e) {
+          status(/admin_resetar|function|schema cache/i.test(e.message)
+            ? "Falta rodar o supabase-v2-zerar.sql no Supabase"
+            : "Erro: " + e.message, true);
+        }
+      };
+
+      app.querySelectorAll(".card[data-id]").forEach((card) => {
         const id = card.dataset.id;
         card.querySelector("select").onchange = (ev) => salvar(id, ev.target.value || null, false);
         card.querySelector(".btn").onclick = () => {

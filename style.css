@@ -325,6 +325,66 @@ h2 { font-size: clamp(1.3rem, 7vw, 1.9rem); }
 }
 @keyframes cair { to { transform: translate(var(--x), 110vh) rotate(var(--r)); } }
 
+/* ---------- Emojis adesivo ----------
+   Mesmo desenho em todo celular, com borda branca e sombra de adesivo. */
+.emo {
+  display: inline-block;
+  height: 1.15em;
+  width: auto;
+  vertical-align: -0.22em;
+  filter: drop-shadow(1px 0 #fff) drop-shadow(-1px 0 #fff) drop-shadow(0 1px #fff) drop-shadow(0 -1px #fff) drop-shadow(1.5px 2px 0 var(--tinta));
+}
+.emoji .emo, .trofeu .emo, .cadeado .emo {
+  height: 1em;
+  vertical-align: middle;
+  filter: drop-shadow(3px 0 #fff) drop-shadow(-3px 0 #fff) drop-shadow(0 3px #fff) drop-shadow(0 -3px #fff) drop-shadow(4px 5px 0 var(--tinta));
+}
+.emoji { filter: none; }
+.emoji .emo { transform: rotate(-6deg); }
+.cadeado .emo { height: 1.1em; filter: drop-shadow(2px 0 #fff) drop-shadow(-2px 0 #fff) drop-shadow(0 2px #fff) drop-shadow(0 -2px #fff); }
+
+/* ==========================================================
+   Encaixe na tela de cada celular
+   Usa a altura visível de verdade (svh/dvh, que descontam a barra do
+   navegador) para a roleta, o vencedor e a contagem caberem sem rolar.
+   ========================================================== */
+.tela { min-height: 100vh; min-height: 100dvh; }
+
+/* Roleta: tudo centralizado na vertical, roda do maior tamanho que couber. */
+.tela-roleta { justify-content: center; gap: clamp(10px, 2.2svh, 20px); }
+.tela-roleta h1 { font-size: clamp(1.6rem, min(10.5vw, 6.2svh), 3rem); }
+.tela-roleta .letreiro { padding: clamp(12px, 2svh, 18px) 14px; }
+.tela-roleta .chamada { font-size: clamp(.85rem, 2.1svh, 1.02rem); }
+.roda-box {
+  width: clamp(200px, min(86vw, 100svh - 330px), 400px);
+  margin: 4px auto 0;
+}
+.tela-roleta .btn.gigante { width: min(100%, 400px); align-self: center; }
+
+/* Votação: fotos acompanham a largura da tela. */
+.opcao.pessoa .avatar { width: clamp(64px, 21vw, 96px); }
+
+/* Suspense e vencedor: escala pela altura também. */
+.contagem { font-size: clamp(5rem, min(36vw, 22svh), 10rem); }
+.avatar.grande { width: clamp(130px, min(52vw, 30svh), 240px); }
+.raios { width: clamp(230px, min(90vw, 50svh), 420px); }
+.vencedor-nome { font-size: clamp(1.9rem, min(12vw, 7svh), 3.6rem); }
+.trofeu { font-size: clamp(2rem, 6svh, 3rem); }
+
+/* Celulares baixinhos (ou com a barra do navegador grande). */
+@media (max-height: 700px) {
+  .tela { gap: 12px; padding-top: calc(12px + env(safe-area-inset-top)); padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .emoji { font-size: 3.2rem; }
+  .letreiro small { font-size: .65rem; margin-bottom: 4px; }
+  .btn.gigante { padding: 14px; font-size: 1.25rem; }
+  .palco { padding: 14px 0 4px; }
+}
+
+/* Telas largas (tablet/computador): mantém cara de celular, no centro. */
+@media (min-width: 600px) {
+  .tela { max-width: 440px; }
+}
+
 /* Quem prefere menos movimento ganha a versão calma. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
