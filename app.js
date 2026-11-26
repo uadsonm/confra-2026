@@ -4,6 +4,7 @@
   const app = document.getElementById("app");
   const KEY = "confra-votos";
   const KEY_RODADA = "confra-rodada";
+  const KEY_ENVIO = "confra-envios"; // votos ainda não confirmados pelo banco
   const INTERVALO = 4000; // de quanto em quanto tempo checa se algo foi revelado
   const CORES = ["#ff2e93", "#ffe600", "#00d4ff", "#7cff4f", "#ff8a00"];
   const calmo = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -54,6 +55,37 @@
     setTimeout(() => box.remove(), 5000);
   }
 
+  // ---------- Envio dos votos ----------
+  // O voto vai para uma fila no celular e é enviado ao banco. Se a internet
+  // falhar, fica na fila e é reenviado na próxima checagem.
+  const lerFila = () => JSON.parse(localStorage.getItem(KEY_ENVIO) || "[]");
+  const gravarFila = (f) => localStorage.setItem(KEY_ENVIO, JSON.stringify(f));
+  let enviando = false;
+  function guardarVoto(categoria, escolhido) {
+    const f = lerFila().filter((v) => v.categoria !== categoria);
+    f.push({ categoria, escolhido });
+    gravarFila(f);
+    enviarFila();
+  }
+  async function enviarFila() {
+    if (enviando) return;
+    enviando = true;
+    try {
+      const rodadaLocal = Number(localStorage.getItem(KEY_RODADA)) || null;
+      for (const v of lerFila()) {
+        try {
+          await Nucleo.enviarVoto(rodadaLocal, v.categoria, v.escolhido);
+          gravarFila(lerFila().filter((x) => x.categoria !== v.categoria));
+        } catch (e) {
+          console.warn("voto não enviado, tento de novo depois", e);
+          break;
+        }
+      }
+    } finally {
+      enviando = false;
+    }
+  }
+
   // ---------- Roteamento ----------
   function inicio() {
     if (modoTelao) return lista();
@@ -81,6 +113,7 @@
       if (minha !== rodada && (minha || temVotos)) {
         Object.keys(votos).forEach((k) => delete votos[k]);
         salvar();
+        gravarFila([]);
         vistos.clear();
         fila.length = 0;
         resultados = {};
@@ -91,6 +124,7 @@
         return;
       }
     }
+    if (lerFila().length) enviarFila();
     dados.sort((a, b) => new Date(a.revelado_em) - new Date(b.revelado_em));
     resultados = Object.fromEntries(dados.map((r) => [r.categoria, r.vencedor]));
 
@@ -341,6 +375,7 @@
     btn.onclick = () => {
       votos[cat.id] = escolha;
       salvar();
+      guardarVoto(cat.id, escolha);
       // Susto do voto: flash, tremedeira e explosão saindo do botão.
       vibrar("susto");
       FX.flash("#fff", 420, 0.9);

@@ -7,24 +7,37 @@
   <meta name="referrer" content="no-referrer">
   <title>Admin</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@500;700;900&display=swap">
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=12">
   <style>
     .card { background: #1c1c1c; border: 2px solid #333; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
     .card.rev { border-color: #2ecc71; }
     .card h3 { font-size: 1.05rem; }
     .card select, #senha { font: inherit; padding: 12px; border-radius: 10px; border: 1px solid #444; background: #111; color: inherit; width: 100%; }
     .card .btn { padding: 12px; font-size: 1rem; }
-    .card.rev .btn { background: #2a2a2a; color: inherit; }
+    .card.rev .btn-revelar { background: #2a2a2a; color: inherit; }
     .status { position: sticky; top: 0; background: #111; padding: 8px 0; font-size: .9rem; text-align: center; z-index: 1; }
     .erro { color: #ff6b6b; }
     .card.perigo { margin-top: 24px; border-color: #ff6b6b; }
     .card.perigo .btn { background: #ff6b6b; color: #fff; }
+
+    /* Apuração real */
+    .placar-admin { display: flex; flex-direction: column; gap: 6px; }
+    .placar-admin .vazio { font-size: .85rem; opacity: .6; }
+    .voto-linha { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 2px 8px; font-size: .92rem; }
+    .voto-linha .avatar.mini { width: 28px; }
+    .voto-linha b { font-family: var(--titulo); font-weight: 400; }
+    .voto-linha .barra { grid-column: 2 / -1; height: 6px; border-radius: 3px; background: #333; overflow: hidden; }
+    .voto-linha .barra i { display: block; height: 100%; background: var(--amarelo); transition: width .4s; }
+    .voto-linha.top .barra i { background: var(--rosa); }
+    .voto-linha .tag { font-size: .7rem; font-weight: 900; color: var(--amarelo); margin-left: 4px; }
+    .btn-aceitar { background: #2ecc71 !important; color: var(--tinta) !important; }
+    .contador { text-align: center; font-weight: 900; }
   </style>
 </head>
 <body>
   <main id="app" class="tela"></main>
-  <script src="dados.js?v=11"></script>
-  <script src="nucleo.js?v=11"></script>
+  <script src="dados.js?v=12"></script>
+  <script src="nucleo.js?v=12"></script>
   <script>
     const C = window.CONFRA;
     const app = document.getElementById("app");
@@ -33,7 +46,10 @@
     // A senha vem no link (admin.html#senha) e some da barra de endereço logo em seguida.
     let senha = (decodeURIComponent(location.hash.slice(1)) || sessionStorage.getItem("confra-senha") || "").trim();
     if (location.hash) history.replaceState(null, "", location.pathname);
-    let estado = {}; // categoria -> {vencedor, revelado}
+    let estado = {};      // categoria -> {vencedor, revelado}
+    let apuracao = null;  // { celulares, porCat: { categoria: [{escolhido, votos}] } }
+    let erroApuracao = "";
+    let timerApuracao = null;
 
     function status(msg, erro) {
       const el = document.getElementById("status");
@@ -41,6 +57,7 @@
     }
 
     function telaSenha(msg) {
+      clearInterval(timerApuracao);
       app.innerHTML = `
         <h1>Admin</h1>
         ${msg ? `<p class="erro">${esc(msg)}</p>` : ""}
@@ -60,6 +77,9 @@
         estado = {};
         lista.forEach((r) => (estado[r.categoria] = { vencedor: r.vencedor, revelado: r.revelado }));
         render();
+        atualizarApuracao();
+        clearInterval(timerApuracao);
+        timerApuracao = setInterval(atualizarApuracao, 5000);
       } catch (e) {
         sessionStorage.removeItem("confra-senha");
         if (!senha) return telaSenha("");
@@ -69,26 +89,92 @@
       }
     }
 
+    // ---------- Apuração real (atualiza sozinha a cada 5 s) ----------
+    async function atualizarApuracao() {
+      try {
+        const r = await Nucleo.adminVotos(senha);
+        const porCat = {};
+        (r.votos || []).forEach((v) => (porCat[v.categoria] = porCat[v.categoria] || []).push(v));
+        Object.values(porCat).forEach((l) => l.sort((a, b) => b.votos - a.votos));
+        apuracao = { celulares: r.celulares || 0, porCat };
+        erroApuracao = "";
+      } catch (e) {
+        erroApuracao = /admin_votos|function|schema cache/i.test(e.message)
+          ? "Falta rodar o supabase-v3-votos.sql no Supabase para ver os votos reais."
+          : "Não consegui carregar os votos: " + e.message;
+      }
+      pintarApuracao();
+    }
+
+    // Mais votado de uma categoria (null se ninguém votou ou se deu empate no topo).
+    function maisVotado(id) {
+      const l = apuracao && apuracao.porCat[id];
+      if (!l || !l.length) return { nome: null, empate: false };
+      const empate = l.length > 1 && l[0].votos === l[1].votos;
+      return { nome: empate ? null : l[0].escolhido, votos: l[0].votos, empate };
+    }
+
+    // Só redesenha os placares (sem mexer nas listas abertas do admin).
+    function pintarApuracao() {
+      const cont = document.getElementById("contador");
+      if (cont) {
+        cont.innerHTML = erroApuracao
+          ? `<span class="erro">${esc(erroApuracao)}</span>`
+          : apuracao ? `📱 ${apuracao.celulares} ${apuracao.celulares === 1 ? "celular votou" : "celulares votaram"}` : "Carregando votos…";
+      }
+      C.categorias.forEach((c) => {
+        const caixa = document.querySelector(`[data-apu="${c.id}"]`);
+        const btn = document.querySelector(`.card[data-id="${c.id}"] .btn-aceitar`);
+        if (!caixa) return;
+        const l = (apuracao && apuracao.porCat[c.id]) || [];
+        const total = l.reduce((s, v) => s + v.votos, 0);
+        const max = l.length ? l[0].votos : 1;
+        const e = estado[c.id] || {};
+        caixa.innerHTML = !l.length
+          ? `<div class="vazio">Ninguém votou nesta categoria ainda.</div>`
+          : `<div class="vazio">${total} ${total === 1 ? "voto" : "votos"}</div>` + l.map((v, i) => `
+            <div class="voto-linha ${i === 0 ? "top" : ""}">
+              ${Nucleo.avatar(v.escolhido, "mini")}
+              <span>${esc(v.escolhido)}${v.escolhido === e.vencedor ? `<span class="tag">★ ESCOLHIDO</span>` : ""}</span>
+              <b>${v.votos}</b>
+              <div class="barra"><i style="width:${(v.votos / max) * 100}%"></i></div>
+            </div>`).join("");
+
+        if (btn) {
+          const top = maisVotado(c.id);
+          btn.hidden = e.revelado || (!top.nome && !top.empate);
+          btn.disabled = !top.nome || top.nome === e.vencedor;
+          btn.textContent = top.empate ? "Empate no topo: escolha na lista"
+            : top.nome === e.vencedor ? `✅ ${top.nome} (mais votado) já escolhido`
+            : `✅ Aceitar o mais votado: ${top.nome}`;
+          btn.dataset.nome = top.nome || "";
+        }
+      });
+    }
+
     function render() {
       app.innerHTML = `
         <div class="status" id="status">${Nucleo.MOCK ? "⚠️ Modo de teste local (Supabase não configurado)" : "Conectado ✓"}</div>
         <h1>Admin</h1>
-        <p class="miudo">Escolha o vencedor de cada categoria. Ao tocar em <b>Revelar</b>, o resultado aparece na hora no celular de todo mundo.</p>
+        <p class="contador" id="contador">Carregando votos…</p>
+        <p class="miudo">Veja os votos reais de cada categoria. <b>Aceite o mais votado</b> ou escolha outra pessoa na lista. Ao tocar em <b>Revelar</b>, o resultado aparece na hora no celular de todo mundo.</p>
         ${C.categorias.map((c) => {
           const e = estado[c.id] || {};
           return `
           <div class="card ${e.revelado ? "rev" : ""}" data-id="${c.id}">
             <h3>${c.emoji} ${esc(c.nome)} ${e.revelado ? "· revelado ✅" : ""}</h3>
+            <div class="placar-admin" data-apu="${c.id}"></div>
+            <button class="btn btn-aceitar" hidden></button>
             <select ${e.revelado ? "disabled" : ""}>
               <option value="">— escolher vencedor —</option>
               ${c.indicados.map((n) => `<option ${n === e.vencedor ? "selected" : ""}>${esc(n)}</option>`).join("")}
             </select>
-            <button class="btn">${e.revelado ? "Esconder de novo" : "🎉 Revelar"}</button>
+            <button class="btn btn-revelar">${e.revelado ? "Esconder de novo" : "🎉 Revelar"}</button>
           </div>`;
         }).join("")}
         <div class="card perigo">
           <h3>🔄 Zerar votação</h3>
-          <p class="miudo">Apaga os votos de todos os celulares, esconde o que já foi revelado e manda todo mundo de volta para a roleta (em até ~4 s). Os vencedores escolhidos acima continuam salvos.</p>
+          <p class="miudo">Zera a contagem de votos, apaga os votos dos celulares, esconde o que já foi revelado e manda todo mundo de volta para a roleta (em até ~4 s). Os vencedores escolhidos acima continuam salvos.</p>
           <button class="btn" id="zerar">Zerar e voltar todo mundo pra roleta</button>
         </div>`;
 
@@ -99,6 +185,7 @@
           await Nucleo.adminResetar(senha);
           Object.values(estado).forEach((e) => { e.revelado = false; });
           render();
+          atualizarApuracao();
           status("Votação zerada! Todo mundo volta pra roleta 🔄");
         } catch (e) {
           status(/admin_resetar|function|schema cache/i.test(e.message)
@@ -110,13 +197,18 @@
       app.querySelectorAll(".card[data-id]").forEach((card) => {
         const id = card.dataset.id;
         card.querySelector("select").onchange = (ev) => salvar(id, ev.target.value || null, false);
-        card.querySelector(".btn").onclick = () => {
+        card.querySelector(".btn-aceitar").onclick = (ev) => {
+          const nome = ev.currentTarget.dataset.nome;
+          if (nome) salvar(id, nome, false);
+        };
+        card.querySelector(".btn-revelar").onclick = () => {
           const e = estado[id] || {};
           if (!e.revelado && !e.vencedor) return status("Escolha o vencedor antes de revelar", true);
-          if (!e.revelado && !confirm(`Revelar "${C.categorias.find((c) => c.id === id).nome}" para todo mundo?`)) return;
+          if (!e.revelado && !confirm(`Revelar "${C.categorias.find((c) => c.id === id).nome}" para todo mundo?\nVencedor: ${e.vencedor}`)) return;
           salvar(id, e.vencedor, !e.revelado);
         };
       });
+      pintarApuracao();
     }
 
     async function salvar(id, vencedor, revelado) {
@@ -125,7 +217,7 @@
         await Nucleo.adminSalvar(senha, id, vencedor, revelado);
         estado[id] = { vencedor, revelado };
         render();
-        status(revelado ? "Revelado! 🎉" : "Salvo ✓");
+        status(revelado ? "Revelado! 🎉" : vencedor ? `Vencedor: ${vencedor} ✓` : "Salvo ✓");
       } catch (e) {
         status("Erro: " + e.message, true);
       }
