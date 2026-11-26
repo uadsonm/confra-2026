@@ -1,0 +1,5 @@
+# Contém a senha do admin: nunca subir para o GitHub.
+supabase.sql
+
+# Configuração local do Claude (servidor de teste).
+.claude/
