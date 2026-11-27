@@ -150,13 +150,17 @@
   // ---------- Emojis em estilo adesivo ----------
   // Cada celular desenha emoji de um jeito; aqui todos usam o mesmo desenho
   // (Twemoji, SVG leve) com borda de adesivo. Se a internet falhar, volta o emoji normal.
-  const EMOJI_CDN = "https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/";
-  const emojiUrl = (ch) =>
-    EMOJI_CDN + [...ch].map((c) => c.codePointAt(0).toString(16)).filter((c) => c !== "fe0f").join("-") + ".svg";
+  // Primeiro tenta o emoji ANIMADO do Google (Noto); se não existir, o estático
+  // (Twemoji); se nem esse carregar, volta o emoji normal do celular.
+  const codigo = (ch) => [...ch].map((c) => c.codePointAt(0).toString(16)).filter((c) => c !== "fe0f").join("_");
+  const emojiUrl = (ch) => `https://fonts.gstatic.com/s/e/notoemoji/latest/${codigo(ch)}/512.webp`;
+  const emojiEstatico = (ch) => `https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${codigo(ch).replace(/_/g, "-")}.svg`;
   const emo = (ch) =>
-    `<img class="emo" src="${emojiUrl(ch)}" alt="${ch}" draggable="false" onerror="this.replaceWith(this.alt)">`;
+    `<img class="emo" src="${emojiUrl(ch)}" alt="${ch}" draggable="false" ` +
+    `onerror="if(this.dataset.f){this.replaceWith(this.alt)}else{this.dataset.f=1;this.src='${emojiEstatico(ch)}'}">`;
   // Troca todo emoji de um trecho de HTML pelo desenho (só no texto, nunca dentro de tags).
-  const RE_EMOJI = /\p{Extended_Pictographic}\uFE0F?/gu;
+  // Estrelas de enfeite (U+2605 e U+2726) ficam como texto.
+  const RE_EMOJI = /(?![\u2605\u2726])\p{Extended_Pictographic}\uFE0F?/gu;
   const adesivar = (html) => html.replace(/>([^<]+)</g, (m, txt) => ">" + txt.replace(RE_EMOJI, emo) + "<");
 
   // ---------- Atualização automática (site e admin) ----------

@@ -65,7 +65,7 @@
       "Sem pressão. Mas todo mundo tá olhando 👀",
       "Vote com consciência (ou com rancor)",
       "Valendo um troféu e o respeito da firma 🏆",
-      "O RH recomenda: vote com moderação 📋"
+      "O RH recomenda: vote com moderação 🧐"
     ],
     pergunta: [
       "Quem merece esse troféu?",
@@ -79,12 +79,12 @@
       "Anotado! Já tá na planilha 📊",
       "Voto lacrado 💅",
       "Recebido e guardado na urna 📦",
-      "Registrado em cartório (do RH) 📋",
+      "Registrado em cartório (do RH) ✍",
       "Ninguém vai saber que foi você 🤫"
     ],
     espera: [
       "A comissão julgadora está reunida ☕",
-      "Os votos estão sendo contados à mão 🧮",
+      "Os votos estão sendo contados à mão ✍",
       "O auditor pediu mais um cafezinho ☕",
       "Contagem em andamento... com muito critério 🧐",
       "Tá apertado em algumas categorias 😬"
@@ -92,7 +92,7 @@
     suspense: [
       "🥁 Rufem os tambores!",
       "Segura o coração! 💓",
-      "Abre o envelope! ✉",
+      "Abre o envelope! 💌",
       "Quem será, quem será? 🤔",
       "Silêncio no auditório! 🤫"
     ]
@@ -286,7 +286,7 @@
     tela("roleta", `
       <section class="tela tela-roleta">
         <header class="letreiro">
-          <small>🎤 A confra apresenta</small>
+          <small>📣 A confra apresenta</small>
           <h1>${esc(C.titulo)}</h1>
         </header>
         <p class="chamada">${feitas === 0
@@ -479,7 +479,7 @@
           }).join("")}
         </div>
         ${FX.podeVibrar() && !FX.vibracaoLiberada()
-          ? `<button class="btn btn-tremedeira" id="tremedeira">📳 Liga a tremedeira</button>` : ""}
+          ? `<button class="btn btn-tremedeira" id="tremedeira">🫨 Liga a tremedeira</button>` : ""}
       </section>`);
     app.querySelectorAll(".opcao[data-i]").forEach((el) => {
       el.onclick = () => revelar(C.categorias[+el.dataset.i]);

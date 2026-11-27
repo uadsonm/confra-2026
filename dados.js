@@ -21,13 +21,13 @@ window.CONFRA = {
   categorias: [
     { id: "bct",          nome: "Topa Tudo por BCT",            emoji: "💸" },
     { id: "yag",          nome: "YAG do Ano",                   emoji: "✨" },
-    { id: "apertou22",    nome: "Apertou 22 com Toda Certeza",  emoji: "🗳️" },
-    { id: "fofoqueiro",   nome: "Melhor Fofoqueiro",            emoji: "🗣️" },
-    { id: "pavio",        nome: "Mais Pavio Curto",             emoji: "🧨" },
+    { id: "apertou22",    nome: "Apertou 22 com Toda Certeza",  emoji: "🗳" },
+    { id: "fofoqueiro",   nome: "Melhor Fofoqueiro",            emoji: "🗣" },
+    { id: "pavio",        nome: "Mais Pavio Curto",             emoji: "💣" },
     { id: "exestagiario", nome: "Melhor Ex-Estagiário",         emoji: "🎓" },
     { id: "bolo",         nome: "Rainha do Bolo",               emoji: "🎂" },
     { id: "pilha",        nome: "Pilha Tudo",                   emoji: "🔋" },
-    { id: "turista",      nome: "Turista do Ano",               emoji: "🏖️" },
-    { id: "servidor",     nome: "Melhor Servidor Público",      emoji: "🏛️" }
+    { id: "turista",      nome: "Turista do Ano",               emoji: "✈" },
+    { id: "servidor",     nome: "Melhor Servidor Público",      emoji: "🫡" }
   ]
 };

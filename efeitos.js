@@ -182,17 +182,17 @@
   const FRASES = [
     "Psiu! 👀",
     "Alguém acabou de votar em você 😏",
-    "O apresentador tá de olho 🎤",
+    "O apresentador tá de olho 📣",
     "Não fecha não, hein! 📺",
     "Cada voto conta! ✨",
     "A auditoria passou por aqui 🧐",
-    "O RH tá acompanhando a votação 📋",
+    "O RH tá acompanhando a votação 🧐",
     "Contagem parcial: tá apertado! 😬",
     "Alguém acabou de mudar de voto 👀",
     "Tem categoria pegando fogo 🔥",
     "Calma, ainda não saiu nada 😱",
     "Tem gente nervosa aí? 🥁",
-    "Ninguém sai desse palco! 🚪",
+    "Ninguém sai desse palco! ✋",
     "Quem quer dinheiro?! 💸"
   ];
   let proximoSusto = 0;
