@@ -184,7 +184,7 @@
     "Alguém acabou de votar em você 😏",
     "O apresentador tá de olho 🎤",
     "Não fecha não, hein! 📺",
-    "Apuração 100% honesta 😇",
+    "Cada voto conta! ✨",
     "Calma, ainda não saiu nada 😱",
     "Tem gente nervosa aí? 🥁",
     "Ninguém sai desse palco! 🚪",

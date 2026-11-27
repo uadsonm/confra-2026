@@ -231,7 +231,7 @@
           <h1>${esc(C.titulo)}</h1>
         </header>
         <p class="chamada">${feitas === 0
-          ? "Gira a roleta, vê qual categoria saiu e vota!<br>Apuração 100% honesta 😇"
+          ? "Gira a roleta, vê qual categoria saiu e vota!<br>Seu voto é secreto 🤫"
           : `${feitas} de ${C.categorias.length} votadas · ${n === 1 ? "falta só uma!" : `faltam ${n}`}`}</p>
         <div class="roda-box">
           <div class="ponteiro"></div>
