@@ -185,6 +185,11 @@
     "O apresentador tá de olho 🎤",
     "Não fecha não, hein! 📺",
     "Cada voto conta! ✨",
+    "A auditoria passou por aqui 🧐",
+    "O RH tá acompanhando a votação 📋",
+    "Contagem parcial: tá apertado! 😬",
+    "Alguém acabou de mudar de voto 👀",
+    "Tem categoria pegando fogo 🔥",
     "Calma, ainda não saiu nada 😱",
     "Tem gente nervosa aí? 🥁",
     "Ninguém sai desse palco! 🚪",
@@ -205,7 +210,57 @@
     }, 1000);
   }
 
+  // ---------- Toc toc ----------
+  // Um punho gigante bate duas vezes na tela "de dentro pra fora".
+  let batendo = false;
+  function tocToc() {
+    if (batendo) return;
+    batendo = true;
+    const el = document.createElement("div");
+    el.className = "toc-mao";
+    el.innerHTML = window.Nucleo ? Nucleo.emo("👊") : "👊";
+    document.body.appendChild(el);
+
+    const fala = (txt, x) => {
+      const f = document.createElement("span");
+      f.className = "toc-fala";
+      f.textContent = txt;
+      f.style.left = x;
+      document.body.appendChild(f);
+      f.animate(
+        [{ transform: "translate(-50%, 0) scale(.3) rotate(-10deg)", opacity: 0 },
+         { transform: "translate(-50%, -20px) scale(1.2) rotate(6deg)", opacity: 1, offset: 0.2 },
+         { transform: "translate(-50%, -60px) scale(1) rotate(-4deg)", opacity: 0 }],
+        { duration: 900, easing: "ease-out", fill: "forwards" }
+      ).onfinish = () => f.remove();
+    };
+
+    // Aparece, bate (cresce em direção à pessoa), bate de novo e vai embora.
+    const anim = el.animate(
+      [
+        { transform: "translate(-50%, -50%) scale(.2) rotate(-20deg)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1) rotate(0deg)", opacity: 1, offset: 0.15 },
+        { transform: "translate(-50%, -50%) scale(.85)", offset: 0.3 },
+        { transform: "translate(-50%, -50%) scale(1.5)", offset: 0.38 },   // TOC
+        { transform: "translate(-50%, -50%) scale(.85)", offset: 0.55 },
+        { transform: "translate(-50%, -50%) scale(1.5)", offset: 0.63 },   // TOC
+        { transform: "translate(-50%, -50%) scale(1)", opacity: 1, offset: 0.8 },
+        { transform: "translate(-50%, -50%) scale(.2) rotate(20deg)", opacity: 0 }
+      ],
+      { duration: calmo ? 1200 : 2000, easing: "ease-in-out", fill: "forwards" }
+    );
+    const total = calmo ? 1200 : 2000;
+    [0.38, 0.63].forEach((t, i) => setTimeout(() => {
+      vibrar([70]);
+      tremer(16, 280);
+      flash("#fff", 160, 0.25);
+      fala(i === 0 ? "TOC!" : "TOC!", i === 0 ? "30%" : "70%");
+    }, t * total));
+    anim.onfinish = () => { el.remove(); batendo = false; };
+  }
+
   window.FX = {
+    tocToc,
     vibrar, podeVibrar, vibracaoLiberada, tremer, flash, explodir, explodirEm,
     fogos, letrasPulando, entrada, aviso, iniciarSustos, calmo
   };

@@ -387,6 +387,31 @@ h2 { font-size: clamp(1.3rem, 7vw, 1.9rem); }
   pointer-events: none;
 }
 
+/* Toc toc: punho batendo na tela quando a pessoa demora. */
+.toc-mao {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 45;
+  font-size: min(48vw, 260px);
+  line-height: 1;
+  pointer-events: none;
+  opacity: 0;
+  filter: drop-shadow(0 12px 0 rgba(26, 5, 64, .6));
+}
+.toc-mao .emo { height: 1em; vertical-align: top; filter: drop-shadow(5px 0 #fff) drop-shadow(-5px 0 #fff) drop-shadow(0 5px #fff) drop-shadow(0 -5px #fff); }
+.toc-fala {
+  position: fixed;
+  top: 28%;
+  z-index: 46;
+  font-family: var(--titulo);
+  font-size: 2.6rem;
+  color: var(--amarelo);
+  text-shadow: 3px 3px 0 var(--rosa), 6px 6px 0 var(--tinta);
+  pointer-events: none;
+  opacity: 0;
+}
+
 /* Ponteiro da roleta dá um tranco a cada fatia que passa. */
 .ponteiro.tique { animation: tique .14s ease-out; }
 @keyframes tique { 40% { transform: translateX(-50%) rotate(-28deg); } }

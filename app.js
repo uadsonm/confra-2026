@@ -31,6 +31,7 @@
   function tela(nome, html) {
     clearInterval(timer);
     clearTimeout(timer);
+    pararDemora();
     telaAtual = nome;
     app.innerHTML = Nucleo.adesivar(html);
     window.scrollTo(0, 0);
@@ -54,6 +55,64 @@
     document.body.appendChild(box);
     setTimeout(() => box.remove(), 5000);
   }
+
+  // ---------- Piadinhas (uma sorteada a cada vez que a tela aparece) ----------
+  // Graça de auditório sem entregar o jogo: nada de "apuração honesta".
+  const sortear = (lista) => lista[Math.floor(Math.random() * lista.length)];
+  const PIADAS = {
+    roleta: [
+      "Seu voto é secreto 🤫",
+      "Sem pressão. Mas todo mundo tá olhando 👀",
+      "Vote com consciência (ou com rancor)",
+      "Valendo um troféu e o respeito da firma 🏆",
+      "O RH recomenda: vote com moderação 📋"
+    ],
+    pergunta: [
+      "Quem merece esse troféu?",
+      "Quem vem à sua mente primeiro?",
+      "Pensa bem... ou não pensa 🤔",
+      "Sem medo de magoar ninguém 💔",
+      "Todo mundo sabe quem é, né? 👀"
+    ],
+    computado: [
+      "Seu voto foi registrado ✅",
+      "Anotado! Já tá na planilha 📊",
+      "Voto lacrado 💅",
+      "Recebido e guardado na urna 📦",
+      "Registrado em cartório (do RH) 📋",
+      "Ninguém vai saber que foi você 🤫"
+    ],
+    espera: [
+      "A comissão julgadora está reunida ☕",
+      "Os votos estão sendo contados à mão 🧮",
+      "O auditor pediu mais um cafezinho ☕",
+      "Contagem em andamento... com muito critério 🧐",
+      "Tá apertado em algumas categorias 😬"
+    ],
+    suspense: [
+      "🥁 Rufem os tambores!",
+      "Segura o coração! 💓",
+      "Abre o envelope! ✉",
+      "Quem será, quem será? 🤔",
+      "Silêncio no auditório! 🤫"
+    ]
+  };
+
+  // ---------- Toc toc quando a pessoa demora ----------
+  // Parada sem girar/votar: um punho bate na tela. Qualquer toque reinicia a contagem.
+  const DEMORA = 9000;  // primeiro toc toc
+  const REPETE = 8000;  // depois, de quanto em quanto tempo
+  let timerDemora = null;
+  function vigiarDemora() {
+    clearTimeout(timerDemora);
+    timerDemora = setTimeout(function bater() {
+      if (document.hidden || girando) { timerDemora = setTimeout(bater, 2000); return; }
+      FX.tocToc();
+      timerDemora = setTimeout(bater, REPETE);
+    }, DEMORA);
+  }
+  function pararDemora() { clearTimeout(timerDemora); timerDemora = null; }
+  document.addEventListener("pointerdown", () => { if (timerDemora) vigiarDemora(); }, true);
 
   // ---------- Envio dos votos ----------
   // O voto vai para uma fila no celular e é enviado ao banco. Se a internet
@@ -231,7 +290,7 @@
           <h1>${esc(C.titulo)}</h1>
         </header>
         <p class="chamada">${feitas === 0
-          ? "Gira a roleta, vê qual categoria saiu e vota!<br>Seu voto é secreto 🤫"
+          ? "Gira a roleta, vê qual categoria saiu e vota!<br>" + sortear(PIADAS.roleta)
           : `${feitas} de ${C.categorias.length} votadas · ${n === 1 ? "falta só uma!" : `faltam ${n}`}`}</p>
         <div class="roda-box">
           <div class="ponteiro"></div>
@@ -280,7 +339,9 @@
       return;
     }
 
+    vigiarDemora();
     btn.onclick = () => {
+      pararDemora();
       btn.disabled = true;
       btn.textContent = "Girando...";
       girando = true;
@@ -342,6 +403,7 @@
       </div>`);
     app.appendChild(div);
     FX.letrasPulando(div.querySelector("h2"), 45);
+    vigiarDemora();
     document.getElementById("irvotar").onclick = () => { vibrar("toque"); votar(cat); };
   }
 
@@ -352,7 +414,7 @@
       <section class="tela">
         <div class="emoji">${cat.emoji}</div>
         <div class="faixa">${esc(cat.nome)}</div>
-        <p class="progresso">Quem merece esse troféu?</p>
+        <p class="progresso">${sortear(PIADAS.pergunta)}</p>
         <div class="grade">
           ${cat.indicados.map((nome, i) => `
             <button class="opcao pessoa" data-i="${i}">${Nucleo.avatar(nome)}<span>${esc(nome)}</span></button>`).join("")}
@@ -360,6 +422,7 @@
         <button class="btn gigante fixo" id="confirmar" disabled>Escolhe alguém aí</button>
       </section>`);
     const btn = document.getElementById("confirmar");
+    vigiarDemora();
     app.querySelectorAll(".opcao").forEach((el) => {
       el.onclick = () => {
         app.querySelectorAll(".opcao").forEach((o) => o.classList.remove("sel"));
@@ -386,7 +449,7 @@
         <section class="tela centro">
           <div class="emoji">\u{1F5F3}</div>
           <h1 id="computado">Voto computado!</h1>
-          <p class="chamada">(confia 😇)</p>
+          <p class="chamada">${sortear(PIADAS.computado)}</p>
         </section>`);
       FX.letrasPulando(document.getElementById("computado"), 50);
       FX.fogos(1200, 220);
@@ -405,7 +468,7 @@
         </header>
         <span class="ao-vivo">Ao vivo</span>
         <p class="chamada">${qtd === 0
-          ? "Votos registrados! Fica nessa tela: quando o apresentador revelar, o vencedor aparece aqui 👀"
+          ? `Votos registrados! Fica nessa tela: quando o apresentador revelar, o vencedor aparece aqui 👀<br><small>${sortear(PIADAS.espera)}</small>`
           : `${qtd} de ${C.categorias.length} reveladas · toca pra ver de novo`}</p>
         <div class="opcoes">
           ${C.categorias.map((c, i) => {
@@ -440,7 +503,7 @@
         <div class="faixa">${cat.emoji} ${esc(cat.nome)}</div>
         <h2 class="tremer">E o vencedor é...</h2>
         <div id="suspense"><p class="contagem">3</p></div>
-        <p class="chamada">🥁 Rufem os tambores!</p>
+        <p class="chamada">${sortear(PIADAS.suspense)}</p>
       </section>`);
     // Cada número bate mais forte: vibração, tremor e luz vermelha aumentando.
     const batida = (num) => {
